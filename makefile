@@ -4,7 +4,7 @@ assemble:
 
 
 link: assemble
-	@ld reverse_shell-x64.asm -o reverse_shell-x64.asm
+	@ld reverse_shell-x64.o -o reverse_shell-x64
 
 build: link
 	@echo "Done"
