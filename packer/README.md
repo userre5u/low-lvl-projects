@@ -4,7 +4,7 @@ Used to decode sequence of bytes in memory during runtime
 
 for now the shellcode and the key are hardcoded (this will be changed...)
 
-usage: <make build>
+usage: make build
 
 # how it works ?
 In the data section there is a shellcode (encoded with a key), the program initialized several variables and starts
