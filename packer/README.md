@@ -24,8 +24,12 @@ This requires disabling the 'NX' bit.
 Files: 
 *********************************
 payload            -> local shellcode ( instructions are in 'local_shell.asm' )
+
 local_shell.asm    -> simple local shellcode that executes /bin/sh
+
 depack.asm         -> hardcoded version of 'generate_payload.c'
+
 generate_payload.c -> code for generating payload with a stub
+
 makefile           -> automate the compile process
 *********************************
