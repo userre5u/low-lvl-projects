@@ -13,10 +13,10 @@ This requires disabling the 'NX' bit.
 * NX bit -> mark the stack as non-executable area (which prevents from our shellcode to be executed)
 
 1) insert the shellcode into a file (you can take the 'payload.txt' as an example, it simply opens a shell, you can view its asm insturction in 'local_shell.asm' file)
-2) usage: make build
+2) make build
 3) execute the executable
 4) enter filename
-5) enter keyname
+5) enter key (KEY of 1 byte(char) is only supported)
 6) the full stub shellcode will be generated
 
 
