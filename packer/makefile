@@ -1,14 +1,6 @@
+compile:
+	@gcc generate_payload.c -o generate_payload -masm=intel -z execstack -w
 
-binary:
-	@gcc example.c -o example && ./example
-
-assemble:
-	@nasm -f elf64 depack.asm
-
-
-link: assemble
-	@gcc depack.o -z execstack -no-pie -o execute_Me
-
-build: link
-	./execute_Me
+build: compile
+	@echo "Done"
 
