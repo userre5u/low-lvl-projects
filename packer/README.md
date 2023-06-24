@@ -23,7 +23,7 @@ This requires disabling the 'NX' bit.
 
 Files: 
 *********************************
-payload            -> local shellcode ( instructions are in 'local_shell.asm' )
+payload.txt         -> local shellcode ( instructions are in 'local_shell.asm' )
 
 local_shell.asm    -> simple local shellcode that executes /bin/sh
 
