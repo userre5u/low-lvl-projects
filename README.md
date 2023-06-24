@@ -1,12 +1,13 @@
-# shellcodeGames
-reverse_shell-x64.asm -> x64 intel reverse shell client
+# Playing with shell-codes
 
-usage:
-1) make build
-2) run 'nc -lv 4444' (on terminal 'A')
-3) run ./reverse_shell-x64 (on terminal 'B')
+# This repo contains several 'shellcoding' projects (both in x86-64 and C (hopefully in ARM soon))
 
+# 1) Reverse shell x86-64
 
+# 2) Packer (C & x86-64)
+# 3) Injector (in progress)
+***************************************************************************************************************************************
 # TODO: 
-1) add packer to x64 reverse shell (the client will land "encrypted" in memory and will be **decrypted** during **runtime**)
-2) write reverse shell based on ARMv8
+* Write these projects also based on ARMv8
+
+
