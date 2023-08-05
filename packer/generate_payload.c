@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 
 
 typedef struct{
@@ -49,32 +50,14 @@ void iterate_shellcode(shellcode_attr shell_attr){
 
 
 
-void unpack_code(char *shellcode, long size, int key) {
-     asm volatile(
-		    "sub rsp, rsi\n" // this is the size of the shellcode
-		    "xor rcx, rcx\n"
-		    "mov r8b, dl\n"  // this is the key
-	   "unpack:	\n"
-		    "mov r10b, byte[rax+rcx-0x1]\n" // this is the shellcode (starts at rax)
-		    "xor r10b, r8b\n"
-		    "mov byte[rsp+rcx-0x1], r10b\n"
-		    "inc rcx\n"
-		    "cmp rcx, rsi\n"
-		    "jne unpack\n"
-	    "execute_me: \n"
-		    "mov rbx, rsp\n"
-            "jmp rbx\n"
-        :
-        : "r" (shellcode), "r" (key)
-        : "%r11", "%r8"
-    );
-
-
-}
-
-void pack_code(shellcode_attr shell_attr, int key){
-    for (char i=0; i<shell_attr.shellcode_size; i++){
-        shell_attr.shellcode_ptr[i] ^= key;
+void pack_code(shellcode_attr shell_attr, char key[]){
+    while (shell_attr.shellcode_size % 8 != 0){
+        shell_attr.shellcode_size++;
+    }
+    printf("[ DEBUG ] shellcode size: %d\n", shell_attr.shellcode_size);
+    printf("[ DEBUG ] KEY: %lx\n", *(unsigned long*)key);
+    for(char i=0; i<shell_attr.shellcode_size; i += 8){
+        *(unsigned long*)(shell_attr.shellcode_ptr+i) ^= *(unsigned long*)(key);
     }
 }
 
@@ -105,7 +88,7 @@ int align_shellcode(shellcode_attr shell_attr){
 
 }
 
-int build_shellcode(shellcode_attr shell_attr, int key){
+int build_shellcode(shellcode_attr shell_attr, char key[]){
     // phase A - push the packed shellcode into the stack...
     int new_size = shell_attr.shellcode_size+(shell_attr.shellcode_size/8*3)+38;
     char full_buf[new_size];
@@ -129,7 +112,8 @@ int build_shellcode(shellcode_attr shell_attr, int key){
     // mov the key to r8b
     (*ptr++) = '\x41';
     (*ptr++) = '\xb0';
-    (*ptr++) = key;
+    *(unsigned long *)(ptr++) = *(unsigned long*)key;
+
 
     // phase C - start decoding
     strncpy(ptr, "\x44\x8a\x14\x0c\x45\x30\xc2\x44\x88\x14\x0c\x48\xff\xc1", 14);
@@ -153,38 +137,42 @@ int build_shellcode(shellcode_attr shell_attr, int key){
 
 }
 
+void generate_key(char key[]){
+    // Generate 8 byte key for shellcode encoding
+    srand (time(NULL));
+    for (int i=0; i<8; i++){
+        key[i] = rand() % 95 + 32;
+    }  
+}
+
 
 int main(){
     char filename_str[30];
+    char key[8] = {0};
     printf("Enter shellcode filename: ");
     if ( fgets(filename_str, sizeof(filename_str), stdin) == NULL ){
         fatal_msg(strerror(errno));
     }
     filename_str[strcspn(filename_str, "\n")] = 0;
     shellcode_attr shell_attr = read_payload(filename_str);
-    printf("Enter char for encoding: ");
-    int input_enc = getc(stdin);
-    puts("\n*********************************************************************************\n");
+    // printf("Enter char for encoding: ");
+    // int input_enc = getc(stdin);
+    generate_key(key);
     puts("[+] Original shellcode: ");
     iterate_shellcode(shell_attr);
     printf("\n[+] Original shellcode size: %d\n", shell_attr.shellcode_size);
-    puts("\n*********************************************************************************\n");
-    pack_code(shell_attr, input_enc);
+    pack_code(shell_attr, key);
     puts("[+] shellcode After packing (without stub): ");
     iterate_shellcode(shell_attr);
     int flag = check_bytes(shell_attr);
     if (!flag){
         fatal_msg("[-] Packed shellcode contains NULL bytes, cant be executed use a different key\n");
     }
-    // remove the comment if you want to test the shellcode || debug it
-    //unpack_code(shell_attr.shellcode_ptr, shell_attr.shellcode_size, input_enc);
     int new_size = align_shellcode(shell_attr);
     shell_attr.shellcode_size = new_size;
-    puts("\n*********************************************************************************\n");
     puts("[+] Generated full shellcode (with stub)");
-    int full_shellcode_size = build_shellcode(shell_attr, input_enc);
+    int full_shellcode_size = build_shellcode(shell_attr, key);
     shell_attr.shellcode_size = full_shellcode_size;
     puts("");
     printf("[+] Full shellcode size: %d\n", full_shellcode_size);
-    puts("\n*********************************************************************************\n");   
 }
