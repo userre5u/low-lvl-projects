@@ -1,0 +1,7 @@
+#define AC_BLACK "\x1b[38;5;232m"
+#define AC_RED "\x1b[38;5;1m"
+#define AC_GREEN "\x1b[38;5;10m"
+#define AC_YELLOW "\x1b[38;5;226m"
+#define AC_BLUE "\x1b[38;5;21m"
+#define AC_MAGENTA "\x1b[38;5;165m"
+#define AC_NORMAL "\x1b[m"
