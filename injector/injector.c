@@ -89,6 +89,27 @@ int get_padding_size(Elf64_Ehdr* target_binary_header){
 }
 
 
+void patch_section_header(Elf64_Ehdr* target_binary_header){
+    // in case of strip binary
+    Elf64_Shdr* section_header = (Elf64_Shdr*)(target_memory_address + target_binary_header->e_shoff);
+    Elf64_Off section_header_num = target_binary_header->e_shnum;
+    
+    for(int i=0; i<section_header_num; i++){
+        if (section_header->sh_offset+section_header->sh_size == poison_offset){
+            section_header->sh_size += poison_offset;
+            return;
+        }
+        section_header++;
+    }
+
+}
+
+
+void patch_poison(){
+    
+}
+
+
 
 
 int main(int argc, char *argv[]){
@@ -106,7 +127,13 @@ int main(int argc, char *argv[]){
     
     // save original entry point
     Elf64_Addr original_entry_point = target_binary_header->e_entry;
-    
+
+    // change target binary entry point
+    target_binary_header->e_entry = poison_offset;
+
+    patch_section_header(target_binary_header);
+
+    patch_poison(target_binary_header);
     
     
 }
