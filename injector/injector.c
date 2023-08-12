@@ -16,10 +16,11 @@ char fileError[50] = "Error on target binary file: ";
 
 
 // global vars
-unsigned long int target_memory_size;
-unsigned long int poison_memory_size;
+unsigned long int target_binary_size;
+unsigned long int poison_size;
 void *target_memory_address;
-
+Elf64_Off poison_offset;
+Elf64_Addr poison_address;
 
 
 
@@ -37,8 +38,8 @@ void load_target_binary_in_memory(char *target_binary){
     }
     struct stat buf;
     fstat(fd, &buf);
-    target_memory_size = buf.st_size;
-    target_memory_address = mmap(0, target_memory_size, PROT_READ | PROT_WRITE, PROT_READ, fd, 0);
+    target_binary_size = buf.st_size;
+    target_memory_address = mmap(0, target_binary_size, PROT_READ | PROT_WRITE, PROT_READ, fd, 0);
     if (target_memory_address == MAP_FAILED){
         fatal_msg(strcat(mmapError, strerror(errno)));
     }
@@ -55,10 +56,36 @@ void load_poison_binary_in_memory(char *poison_binary){
     }
     struct stat buf;
     fstat(fd, &buf);
-    poison_memory_size = buf.st_size;
-    char* poison_address = malloc(sizeof(poison_memory_size));
+    poison_size = buf.st_size;
+    char* poison_address = malloc(sizeof(poison_size));
 
     fprintf(stdout, "[DEBUG] address of target binary: %p\n", poison_address); 
+}
+
+
+int get_padding_size(Elf64_Ehdr* target_binary_header){
+    // return the padding size between the text segment and data segment
+
+    Elf64_Phdr* target_binary_program_header = (Elf64_Phdr*)(target_memory_address + target_binary_header->e_phoff);
+    Elf64_Half program_headers_num = target_binary_header->e_phnum;
+    int FOUND = 0;
+    Elf64_Off end_of_text_segment;
+    for(int i=0; i<program_headers_num; i++){
+        if (FOUND == 0 && target_binary_program_header->p_type == PT_LOAD && target_binary_program_header->p_flags == (PF_R | PF_X)){
+            FOUND = 1;
+            end_of_text_segment = target_binary_program_header->p_filesz + target_binary_program_header->p_offset;
+            poison_offset = end_of_text_segment;
+            poison_address = target_binary_program_header->p_vaddr + target_binary_program_header->p_filesz;
+            
+            target_binary_program_header->p_filesz += poison_size;
+            target_binary_program_header->p_memsz += poison_size;
+        }
+        else if (1 && target_binary_program_header->p_type == PT_LOAD && target_binary_program_header->p_flags == (PF_R | PF_W)){
+            return target_binary_program_header->p_offset - end_of_text_segment;
+        }
+
+        target_binary_program_header++;
+    }  
 }
 
 
@@ -73,5 +100,13 @@ int main(int argc, char *argv[]){
     char *poison_binary = argv[2];
     load_target_binary_in_memory(target_binary);
     load_poison_binary_in_memory(poison_binary);
+
+    Elf64_Ehdr* target_binary_header = (Elf64_Ehdr*)target_memory_address;
+    int pad_size = get_padding_size(target_binary_header);
+    
+    // save original entry point
+    Elf64_Addr original_entry_point = target_binary_header->e_entry;
+    
+    
     
 }
