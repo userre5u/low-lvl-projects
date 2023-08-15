@@ -3,7 +3,11 @@ asm:
 	@ld poison.o -o poison
 
 build: asm
-	@gcc main.c -o main -fno-stack-protector -z execstack -w
+	@gcc main.c -o main -w
+	@gcc test.c
 
-run: build
+test: build
 	@rm poison.o
+
+clean:
+	@rm a.out inject main poison
