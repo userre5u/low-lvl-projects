@@ -20,4 +20,4 @@ usage:
     
 
 
-The following video shows how to infect the entire /bin/ folder
+The following video shows how to infect a copy of the /bin/ folder
