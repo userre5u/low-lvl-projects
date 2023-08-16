@@ -13,11 +13,14 @@ Explanation (copy commands from 'usage' section below ):
 
 usage:
     1) make test
-    2) echo -en $(objdump -dM intel -j .text poison | cut -f2 | sed 1,7d | sed 's/.*:.*//g' | tr '\n' ' ' | xargs | sed 's/[[:space:]]/\\\x/g' | sed 's/^/\\\x/') > inject 
-    3) run ./a.out and see the message
-    4) ./main a.out inject
-    5) run ./a.out and see the NEW message
     
+    2) echo -en $(objdump -dM intel -j .text poison | cut -f2 | sed 1,7d | sed 's/.*:.*//g' | tr '\n' ' ' | xargs | sed 's/[[:space:]]/\\\x/g' | sed 's/^/\\\x/') > inject 
+    
+    3) run ./a.out and see the message
+    
+    4) ./main a.out inject
+    
+    5) run ./a.out and see the NEW message
 
-
+    
 The following video shows how to infect a copy of the /bin/ folder
