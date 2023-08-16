@@ -2,6 +2,7 @@ section .text
 	global _start
 
 	_start:
+		; save caller registers
 		push rax
 		push rdi
 		push rsi
@@ -10,22 +11,20 @@ section .text
 		push r8
 		push r9
 
-
-        ;fn db "/proc/self/maps", 0
+        ; "/proc/self/maps\x00" 
 		mov rax, 0x007370616d2f666c
 		push rax
 
 		mov rax, 0x65732f636f72702f
 		push rax
 
-        ; open
+        ; open 
         mov rdi, rsp       		; filename
         mov rsi, 0              ; flags (READ ONLY)
         mov rax, 2              ; open syscall
         syscall                 ; call kernel
 
-		add rsp, 16
-
+		add rsp, 16				; clean stack 
 
         ; read
         mov rdi, rax            ; save fd to first arg
@@ -57,11 +56,11 @@ section .text
 			cmp rcx, 0
 			jge is_number
 
-		; rbx contains here the base address in hex
+		; at this point rbx contains the base address in hex, add the entry point offset
 		mov r8, 0x4141414141414141
 		add rbx, r8
 
-        ; msg
+        ; msg to be printed after poison injection
 
 		mov rax, 0x0a3c3c3c2064656b
 		push rax
@@ -75,13 +74,14 @@ section .text
 		mov rax, 0x50203e3e3e090909
 		push rax
 
-		mov rdi, 1
-		mov rsi, rsp
-		mov rdx, 32
-		mov rax, 1
-		syscall
+		mov rdi, 1			; stdout
+		mov rsi, rsp		; msg
+		mov rdx, 32			; msg len
+		mov rax, 1			; write syscall
+		syscall				; call kernel
 		
 		add rsp, 32
+		; restore caller registers	
 		pop r9
 		pop r8
 		pop rdx
@@ -90,4 +90,4 @@ section .text
 		pop rdi
 		pop rax
 
-		jmp rbx
+		jmp rbx				; binary base address (calculated at runtime) + binary offset (calculated at compile time)
