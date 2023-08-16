@@ -17,7 +17,7 @@ void banner(){
 
 
 void start_inject(char *path, char *poison){
-    char full_path[50];
+    char full_path[100];
     DIR *directory;
     struct dirent *dir;
     struct stat buffer;
@@ -30,7 +30,7 @@ void start_inject(char *path, char *poison){
         {
              if (dir->d_type == DT_REG )
             {
-                snprintf(full_path, 50, "%s/%s", path, dir->d_name);
+                snprintf(full_path, 100, "%s/%s", path, dir->d_name);
                 if(injector(full_path, poison) == 0){
                     poison_success++;
                     continue;
