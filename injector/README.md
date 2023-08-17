@@ -2,6 +2,7 @@
 
 Injector is designed to infect binaries (of type elf) that have enough space (for our poison) between the text section and the data section.
 the program support both single file and entire directory infection.
+The poison prints an harmless message to the console however this can be changed to do something else for example creating a reverse tcp shell by modifying the "poison.asm" file.
 
 
 ### Explanation (copy commands from 'usage' section below ):
@@ -24,7 +25,7 @@ the program support both single file and entire directory infection.
     5) run ./a.out and see the NEW message
 
     
-The following video shows how to infect a copy of the /bin/ folder
+The following video shows how to infect a copy of the /bin/ folder, binaries such as curl, ip, du, rm and many more changed their execution flow with our message (poison)
 
 https://github.com/userre5u/shellcodeGames/assets/132401388/41783705-a227-41d6-a937-8a36eb0bb3f5
 
