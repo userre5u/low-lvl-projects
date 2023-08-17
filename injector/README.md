@@ -26,5 +26,6 @@ the program support both single file and entire directory infection.
     
 The following video shows how to infect a copy of the /bin/ folder
 
+https://github.com/userre5u/shellcodeGames/assets/132401388/41783705-a227-41d6-a937-8a36eb0bb3f5
 
-[label](poc.mp4)
+
